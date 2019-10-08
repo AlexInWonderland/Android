@@ -1,2 +1,1 @@
-# Android
-Android
+Learning Android with a couple of examples.
