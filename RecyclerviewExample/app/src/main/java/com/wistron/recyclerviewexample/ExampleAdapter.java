@@ -51,7 +51,7 @@ public class ExampleAdapter extends RecyclerView.Adapter<ExampleAdapter.ExampleV
     }
 
     public interface OnItemClickListener{
-        void onItemClick(int position);
+            void onItemClick(int position);
     }
 
     public void setOnItemClickListener(OnItemClickListener listener){
