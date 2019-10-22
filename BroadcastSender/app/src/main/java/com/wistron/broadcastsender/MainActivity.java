@@ -47,5 +47,5 @@ public class MainActivity extends AppCompatActivity {
         super.onStop();
         unregisterReceiver(broadcastReceiver);
     }
-    
+
 }
