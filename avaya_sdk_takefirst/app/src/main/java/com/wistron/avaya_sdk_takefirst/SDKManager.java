@@ -110,7 +110,7 @@ public class SDKManager implements UserRegistrationListener, ClientListener, Cre
         int port = 5601;
         String domain = "avaya.com.tw";
         boolean useTls = true;
-        String extension = "501032";
+        String extension = "501033";
 
         // Create SIP configuration
         userConfiguration = new UserConfiguration();

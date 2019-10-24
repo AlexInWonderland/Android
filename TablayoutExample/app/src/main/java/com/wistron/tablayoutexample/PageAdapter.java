@@ -10,7 +10,7 @@ public class PageAdapter extends FragmentPagerAdapter {
     private int mNumoftabs;
 
     public PageAdapter(FragmentManager fm, int numoftabs) {
-        super(fm);
+         super(fm);
          this.mNumoftabs = numoftabs;
     }
 

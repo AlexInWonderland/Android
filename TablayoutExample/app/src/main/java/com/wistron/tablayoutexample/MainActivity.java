@@ -30,8 +30,9 @@ public class MainActivity extends AppCompatActivity {
         mPagerAdapter = new PageAdapter(getSupportFragmentManager(), mTabLayout.getTabCount());
 
         mViewPager.setAdapter(mPagerAdapter);
+       // mTabLayout.setupWithViewPager(mViewPager);
 
-        mTabLayout.setOnTabSelectedListener(new TabLayout.BaseOnTabSelectedListener() {
+        mTabLayout.addOnTabSelectedListener(new TabLayout.BaseOnTabSelectedListener() {
 
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
@@ -55,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
-        mViewPager.addOnPageChangeListener(new TabLayout.TabLayoutOnPageChangeListener(mTabLayout));
+        //mViewPager.addOnPageChangeListener(new TabLayout.TabLayoutOnPageChangeListener(mTabLayout));
 
     }
 }
