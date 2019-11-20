@@ -25,15 +25,44 @@ public class MainActivity extends AppCompatActivity {
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(ContextCompat.checkSelfPermission(MainActivity.this,
+                if(ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED){
+
+                }
+                else{
+                    requestPermission();
+                }
+                /*if(ContextCompat.checkSelfPermission(MainActivity.this,
                         Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED){
                     Toast.makeText(MainActivity.this, "Already granted", Toast.LENGTH_SHORT).show();
                 }
                 else{
                     requestStoragePermission();
-                }
+                }*/
             }
         });
+    }
+
+    private void requestPermission(){
+         if(ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_CONTACTS)){
+             new AlertDialog.Builder(this)
+                 .setTitle("t1")
+                 .setMessage("tt")
+                 .setNegativeButton("cancel", new DialogInterface.OnClickListener() {
+                         @Override
+                         public void onClick(DialogInterface dialogInterface, int i) {
+                             dialogInterface.dismiss();
+                         }
+                     })
+                 .setPositiveButton("ok", new DialogInterface.OnClickListener() {
+                     @Override
+                     public void onClick(DialogInterface dialogInterface, int i) {
+                         ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.READ_CONTACTS}, STORAGE_PERMISSION_CODE);
+                     }
+                 }).create().show();
+         }
+         else{
+             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_CONTACTS}, STORAGE_PERMISSION_CODE);
+         }
     }
 
     private void requestStoragePermission(){
