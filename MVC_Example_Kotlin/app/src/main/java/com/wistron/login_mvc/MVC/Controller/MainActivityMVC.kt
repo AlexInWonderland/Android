@@ -20,15 +20,11 @@ class MainActivityMVC : AppCompatActivity() {
         button = findViewById(R.id.btn_login)
         et_pwd = findViewById(R.id.et_pwd)
         et_account = findViewById(R.id.et_account)
-        button.setOnClickListener{
-            //Toast.makeText(this, pwdModel.account + pwdModel.pwd, Toast.LENGTH_SHORT).show()
-            if(et_account.text.toString() == pwdModel.account && et_pwd.text.toString() == pwdModel.pwd){
-                Toast.makeText(this, "login successfully", Toast.LENGTH_SHORT).show()
-
-            }
-            else{
-                Toast.makeText(this, "login failed", Toast.LENGTH_SHORT).show()
-            }
+        button.setOnClickListener {
+            var account: String = et_account.text.toString()
+            var pwd: String = et_pwd.text.toString()
+            pwdModel.checkaccount(account, pwd)
+            Toast.makeText(this, pwdModel.checksuccessmsg(), Toast.LENGTH_SHORT).show()
         }
     }
 }

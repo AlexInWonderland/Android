@@ -22,7 +22,8 @@ public class Presenter constructor(myView: MyView, pwdModel: PWDModel) {
         Log.d("Presenter", "onloginclick")
         pwdModel.checkaccount(account, pwd)
         myView.clearEditText()
-        myView.toastMsg(pwdModel.checksuccessmsg())
+        myView.toastMsg("mvp: " + pwdModel.checksuccessmsg())
+
     }
 
 }
