@@ -2,9 +2,7 @@ package com.wistron.myapplication
 
 //import jdk.nashorn.internal.objects.NativeDate.getTime
 
-import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -12,28 +10,18 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.net.wifi.ScanResult
 import android.net.wifi.WifiManager
-import android.os.Build
 import android.os.Bundle
-import android.os.Environment.getExternalStorageDirectory
 import android.os.Handler
 import android.util.Log
-import android.view.Gravity
+import android.view.Menu
+import android.view.MenuItem
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import java.io.BufferedWriter
-import java.io.File
-import java.io.FileWriter
-import java.lang.Math.*
-import java.text.DecimalFormat
-import java.text.SimpleDateFormat
-import java.util.*
-import kotlin.math.pow
 
 
-class MainActivity : AppCompatActivity(), SensorEventListener {
+class MainActivity : AppCompatActivity(), SensorEventListener{
     lateinit var wifiManager: WifiManager
     lateinit var sensorManager: SensorManager
     private lateinit var wifiReceiver : WifiScanReceiver
@@ -43,12 +31,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     lateinit var mAdapter:MyAdapter
     lateinit var mRecyclerView: RecyclerView
     var results:List<ScanResult> = emptyList()
-
+    private var restFulCall:RestFulCall ?= null
+    var counter = 0
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        wifiReceiver = WifiScanReceiver()
-        registerReceiver(wifiReceiver, IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION))
+
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         registerListener()
         wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
@@ -58,6 +46,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         mAdapter = MyAdapter(results)
         mRecyclerView.adapter = mAdapter
 
+        wifiReceiver = WifiScanReceiver(applicationContext, mAdapter)
+        registerReceiver(wifiReceiver, IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION))
         val handler = Handler()
         val locationUpdate: Unit = object : Runnable {
             override fun run() {
@@ -66,8 +56,36 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 handler.postDelayed(this, 1000)
             }
         }.run()
+    }
 
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        val inflater = menuInflater
+        inflater.inflate(R.menu.menu_test, menu)
+        return true
+    }
 
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when(item.itemId){
+            R.id.item_switch ->
+                if(counter % 2 ==0){
+                    PhoneMac.phoneMacCompared = "AC:37:43:A1:60:C6"
+                    Toast.makeText(applicationContext, "switched to compare AC:37:43:A1:60:C6", Toast.LENGTH_SHORT).show()
+                }
+                else{
+                    PhoneMac.phoneMacCompared = "98:E7:9A:5B:EE:92"
+                    Toast.makeText(applicationContext, "switched to compare 98:E7:9A:5B:EE:92", Toast.LENGTH_SHORT).show()
+                }
+            R.id.item_upload ->
+                {
+                    GlobalVariables.UPLOAD = !GlobalVariables.UPLOAD //toggle the upload function
+                    if(GlobalVariables.UPLOAD)
+                        Toast.makeText(applicationContext, "Start upload!", Toast.LENGTH_SHORT).show()
+                    else
+                        Toast.makeText(applicationContext, "Upload stopped!", Toast.LENGTH_SHORT).show()
+                }
+        }
+        counter++
+        return super.onOptionsItemSelected(item)
     }
 
     override fun onDestroy() {
@@ -101,6 +119,35 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         Log.d("START SCAN CALLED", "");
     }
 
+    override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
+        //TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun onSensorChanged(event: SensorEvent?) {
+        if(event != null){
+            when(event.sensor.type){
+                Sensor.TYPE_LINEAR_ACCELERATION ->{
+                    val xValue = Math.abs(event.values[0])
+                    val yValue = Math.abs(event.values[1])
+                    val zValue = Math.abs(event.values[2])
+                    acc[0] = Math.abs(event.values[0])
+                    acc[1] = Math.abs(event.values[1])
+                    acc[2] = Math.abs(event.values[2])
+                    //print("Alex acc x $xValue, y $yValue, z $zValue\n")
+                }
+                Sensor.TYPE_GYROSCOPE ->{
+                    //val dT:Float = (event.timestamp - timestamp) * NS2S
+                    //print("Alex gyro x angle ${event.values[0]}, y angle ${event.values[1]}, z ${event.values[2]}\n")
+                    gyro[0] = Math.abs(event.values[0])
+                    gyro[1] = Math.abs(event.values[1])
+                    gyro[2] = Math.abs(event.values[2])
+                }
+            }
+        }
+    }
+
+
+/*
     inner class WifiScanReceiver : BroadcastReceiver() {
         var timer = 0
         var prev_wifiList: List<ScanResult> = emptyList()
@@ -113,8 +160,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
                 val wifiManager = c.getSystemService(Context.WIFI_SERVICE) as WifiManager
                 var wifiList: List<ScanResult> = wifiManager.getScanResults()
-                wifiList = wifiManager.getScanResults()
-
+                wifiList = wifiList.sortedWith(compareByDescending(ScanResult::level))
                 val sdf = SimpleDateFormat("yyyy:MM:dd:HH:mm:ss", Locale.getDefault())
                 val currentDateandTime: String = sdf.format(Date())
                 var s:String = "$currentDateandTime,"
@@ -125,15 +171,22 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     prev_wifiList = emptyList()
                     prev_wifiList = wifiList
                     //prev_wifiList = wifiList.sortedWith(compareByDescending(ScanResult::level))
+                    val jsonArray : MutableList<ScanResultJson> = mutableListOf()
+                    for (i in wifiList){
+                        val scanResultJson = ScanResultJson(i.BSSID, i.SSID, i.level)
+                        jsonArray.add(scanResultJson)
+                    }
+                    //postData(jsonArray)
+                    restFulGet("2020/03/19 01:00:00", "2020/03/19 03:00:00")
                 }
                 timer++
 
-                if(timer > 10) {
+                if(timer > 30) {
                     //val sortedWifiList = wifiList.sortedWith(compareByDescending(ScanResult::level))
                     val sortedWifiList = wifiList
                     var coss = Cosine_Similarity(sortedWifiList)
 
-                    Toast.makeText(applicationContext, "Cosine Similarity: " + coss, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(c, "Cosine Similarity: " + coss, Toast.LENGTH_SHORT).show()
                     timer = 0
                 }
                 mAdapter.clearList()
@@ -158,6 +211,64 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 //writeToFile(s)
             }
         }
+
+        fun postData(jsonArray: MutableList<ScanResultJson>){
+            val gson = Gson()
+            val json = gson.toJson(jsonArray)
+            val mediaType = "application/json; charset=utf-8".toMediaType()
+            val request = json.toRequestBody(mediaType)
+            restFulPost(request)
+        }
+
+        fun restFulGet(startDate:String, endDate:String){
+            val client = OkHttpClient()
+            val request: Request
+            var result:MutableList<ScanResultJson> = mutableListOf()
+            try{
+                val url:HttpUrl = HttpUrl.Builder()
+                    .scheme("https")
+                    .host("healthinfotest.azurewebsites.net")
+                    .addPathSegments("/api/Wifi/Info")
+                    .addQueryParameter("StartDate", startDate)
+                    .addQueryParameter("EndDate", endDate)
+                    .build();
+                request = Request.Builder()
+                    .addHeader("Content-Type", "applicantion/json")
+                    .url(url)
+                    .get()
+                    .build()
+                val response = client.newCall(request)
+                restFulCall?.let { response.enqueue(it) }
+            }catch(e:Exception){
+                e.printStackTrace()
+            }
+        }
+
+        fun restFulPost(requestbody: RequestBody){   //1 post
+            val client = OkHttpClient()
+            val request: Request
+            try{
+                val apiURL = "https://healthinfotest.azurewebsites.net/api/Wifi/Info"
+                    request = Request.Builder()
+                        .addHeader("Content-Type", "applicantion/json")
+                        .url(apiURL)
+                        .post(requestbody)
+                        .build()
+
+                val response = client.newCall(request)
+                response.enqueue(object : Callback {
+                    override fun onFailure(call: Call, e: IOException) {
+                        e.printStackTrace()
+                    }
+                    override fun onResponse(call: Call, response: Response) {
+                        val responseStr = response.body
+                    }
+                })
+            }catch(e:Exception){
+                e.printStackTrace()
+            }
+        }
+
 
         fun Cosine_Similarity(sortedWifiList:List<ScanResult>):Double{
 
@@ -189,7 +300,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                         B_square += softmax_list[pick_count].toFloat() *(prev_wifi_mutableMap.get(i.BSSID)!! + 100)?.toFloat()!!.pow(2)
                     }
                     else{
-                        dot_product += (-1)*softmax_list[pick_count].toFloat() * i.level
+                        dot_product += (-1)*softmax_list[pick_count].toFloat() * (i.level + 100)
                         A_square += softmax_list[pick_count].toFloat() * ((i.level + 100).toFloat()).pow(2)
                     }
                     pick_count++
@@ -202,13 +313,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             for(i in sortedWifiList)
                 s += i.BSSID + " : ${i.level}" + ", "
             //writeToFile(s)
-            //println("previous $prev_wifiList")
-            //println("sorted  $sortedWifiList")
-            //val List= listOf(-1,-2,-3,-4,-1,-2,-3)
-            //val sof = softmax(List)
-            //println(sof)
             return dot_product/(sqrt(A_square.toDouble()) * sqrt(B_square.toDouble()))
         }
+
 
         fun softmax(x:List<ScanResult>):List<Double>{
             var exp_list:MutableList<Double> = mutableListOf()
@@ -246,31 +353,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
 
     }
+*/
 
-    override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
-        //TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun onSensorChanged(event: SensorEvent?) {
-        if(event != null){
-            when(event.sensor.type){
-                Sensor.TYPE_LINEAR_ACCELERATION ->{
-                    val xValue = Math.abs(event.values[0])
-                    val yValue = Math.abs(event.values[1])
-                    val zValue = Math.abs(event.values[2])
-                    acc[0] = Math.abs(event.values[0])
-                    acc[1] = Math.abs(event.values[1])
-                    acc[2] = Math.abs(event.values[2])
-                    //print("Alex acc x $xValue, y $yValue, z $zValue\n")
-                }
-                Sensor.TYPE_GYROSCOPE ->{
-                    //val dT:Float = (event.timestamp - timestamp) * NS2S
-                    //print("Alex gyro x angle ${event.values[0]}, y angle ${event.values[1]}, z ${event.values[2]}\n")
-                    gyro[0] = Math.abs(event.values[0])
-                    gyro[1] = Math.abs(event.values[1])
-                    gyro[2] = Math.abs(event.values[2])
-                }
-            }
-        }
-    }
 }
